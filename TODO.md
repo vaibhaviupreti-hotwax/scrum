@@ -1,0 +1,12 @@
+# Todo
+
+- Checked the user login-related entities, traced back api flow for this one
+- Practised SQL queries on JOINS, NESTED GROUP BY, and started learning about CTE.
+- Read, understood the new requirement, and started collecting resources for the same: 
+- Learnt New Keywords - wavepicking
+- work on new req: pre orders sql query 
+   https://docs.google.com/document/d/1_6bEWOukw7VEECVV8eSeJCU95uIxSZQWXAGGl7hh1RI/edit?tab=t.g8a6986um3 
+- HotWax Commerce Metrics Framework
+- https://github.com/saastechacademy/foundation/blob/main/project-ideas/fulfillment-center-mgmt/readme.md
+   fulfillment document
+- learn about Product entity
