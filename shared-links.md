@@ -12,36 +12,66 @@ This document collects links shared by mentors and team members, organized by to
 - ERP terminology: https://www.visualsouth.com/blog/erp-terminology
 
 ## 2. Assignment and Learning Resources
+**Parnika Rangnekar (Apr 27)**
 - Party Data Model (Module 4): https://github.com/saastechacademy/foundation/blob/main/sde-program.md
 - Data model resource: https://www.ibm.com/think/topics/data-modeling
 - Data model patterns: https://www.moqui.org/m/docs/framework/Data+and+Resources/Data+Model+Patterns
 - Data model foundation: https://github.com/saastechacademy/foundation/tree/main/udm/beginner
+
+**Anil Patel**
 - UDM analysis and design: https://github.com/saastechacademy/foundation/blob/main/udm/beginner/udm-analysis-and-design.md
 
 ## 3. Shopify / OMS / GraphQL Links
+**Param Dongre (Apr 25)**
 - Shopify Order GraphQL: https://shopify.dev/docs/api/admin-graphql/latest/queries/order
 - Shopify Webhook docs: https://shopify.dev/docs/api/webhooks/latest?reference=toml
 - Shopify Order Lifecycle: https://help.shopify.com/en/manual/fulfillment/managing-orders/order-status
+
+**Parnika Rangnekar (Apr 27)**
 - HotWax NextGen OMS instance URLs:
   - https://nextgen-oms.hotwax.io
   - https://nextgen-maarg.hotwax.io
 - Hotwax development Shopify store (for local linking only): https://hotwax-development.myshopify.com
+
+**Shrikruti Sharma (Apr 7)**
 - Dev OMS control panel: https://dev-oms.hotwax.io/commerce/control/main
 
 ## 4. Project and Implementation Plans
+**Prerak Ghatode**
 - Orders and Returns Implementation Plan: https://github.com/hotwax/mantle-shopify-connector/blob/main/doc/OrdersAndReturnsImplementationPlan.md
-- OrderUnifiedMegaQuery template: https://github.com/hotwax/mantle-shopify-connector/blob/main/template/graphQL/OrderUnifiedMegaQuery.ftl
-- Fulfillment center management project ideas: https://github.com/saastechacademy/foundation/blob/main/project-ideas/fulfillment-center-mgmt/readme.md
-- AST in SQL and GraphQL systems: https://github.com/saastechacademy/foundation/blob/main/cs-fundamentals/understand-ast-in-sql-and-graphql-systems.md
-- HotWax Commerce Build Notes: https://docs.google.com/document/d/1g3lKSRtz1Op-8Uwtn-o89dbIZy1ddOCS_F4izo184-g/edit?tab=t.0
-- Moqui assignment GitHub repo: https://github.com/RakshitSingh04/Hotwax-Party/tree/main/party
 
-## 5. Reference Framework and Data Model Docs
+**Param Dongre (Apr 25)**
+- OrderUnifiedMegaQuery template: https://github.com/hotwax/mantle-shopify-connector/blob/main/template/graphQL/OrderUnifiedMegaQuery.ftl
+
+**Aditya Patel (Apr 27)**
+- Fulfillment center management project ideas: https://github.com/saastechacademy/foundation/blob/main/project-ideas/fulfillment-center-mgmt/readme.md
+**Anil Patel (Apr 25)**
+- AST in SQL and GraphQL systems with compiler design concepts
+
+**Apache OFBiz Documentation**
 - Moqui Data Model Patterns: https://www.moqui.org/m/docs/framework/Data+and+Resources/Data+Model+Patterns
 - Apache OFBiz General Entity Overview: https://cwiki.apache.org/confluence/display/OFBIZ/General+Entity+Overview
 - Extensibility Pattern reference: https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=7045161#GeneralEntityOverview-ExtensibilityPattern
 
 ## 6. Analytics and Dashboard Tools
+**Shrikruti Sharma (Apr 25)**
+- Apache Superset: https://superset.apache.org/
+
+**Tathya Tool**
+- Tathya Doc: https://docs.hotwax.co/everything/tools/tathya
+
+## 7. Session Prep and Lifecycle Documents
+**Shrikruti Sharma (Apr 25)**
+- Gift Card Orders Lifecycle (prepare before session)
+- Returns Lifecycle
+- Exchanges Lifecycle
+- BOPIS Document
+
+## 8. Other Useful Links
+**General Resources**
+- Google Notebook: https://notebooklm.google.com/
+
+**Garima Badera (Apr 3)**
 - Apache Superset: https://superset.apache.org/
 - Tathya Doc: https://docs.hotwax.co/everything/tools/tathya
 
