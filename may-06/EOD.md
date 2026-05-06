@@ -1,15 +1,16 @@
-# Daily Report
-
 ## What I did today:
-- Attended a data model session and learned about entities related to UserLogin.
-- Tracked down UserLoginEntities by UI and actual db match
-- Understood a Business requirement - on Pre Orders (OMS redesign module)
+- Attended a Data Model session and learned about entities related to UserLogin.
+- Practised SQL queries on JOINS, NESTED GROUP BY, and started learning about CTE.
+- Understood a Business requirement - on Pre Orders (OMS redesign module) and started collecting resources to write MySql query for the same.
+https://docs.google.com/document/d/1_6bEWOukw7VEECVV8eSeJCU95uIxSZQWXAGGl7hh1RI/edit?tab=t.g8a6986um3 
 - Downloaded Postman for further API Testing
 - Completed Apache OFBiz 24.9 local setup - https://github.com/apache/ofbiz-framework/tree/release24.09 
 - Read on Microservices communication mechanisms types.
 - Read about the meaning behind commands that we use while setup.
-- Visited Apache website to check mirroring of bugs
 - Learnt new keywords: Wave picking, SSO.
+- Visited Apache website to check mirroring of bugs
+- Tracked down UserLoginEntities by UI and actual db match
+- Started understanding the "Product entity".
 
 ## What will I do tomorrow:
 - Will check where SSO is used in code, check user login code in detail.
@@ -17,3 +18,11 @@
 
 ## Blockers: 
 None
+
+https://github.com/vaibhaviupreti-hotwax/scrum
+
+
+
+-- HotWax Commerce Metrics Framework
+-- https://github.com/saastechacademy/foundation/blob/main/project-ideas/fulfillment-center-mgmt/readme.md
+   fulfillment document
