@@ -21,3 +21,5 @@ There are also two important encryption modes:
 - **One-way encryption** (irreversible): data is transformed into a hash or digest, and the original plaintext cannot be recovered. Example: hashing employee passwords in an HR system so logins can be verified without storing raw passwords.
 
 Common robust algorithms include AES (used by governments), RSA (for secure transmission), and ECC (efficient for IoT).
+
+## Apache OFBiz ek ERP hai jo aksar doosre e-commerce platforms ke saath connect hota hai:REST API Integration: OFBiz doosre platforms (Magento, Shopify) ke REST APIs ko call karta hai.Magento/Shopify Interaction: Maan lo Shopify par order aaya. Shopify ki API ek "Webhook" (ek tarah ka push notification) bhejegi OFBiz ko. OFBiz us data (JSON format mein) ko read karega aur apna inventory update kar lega.
