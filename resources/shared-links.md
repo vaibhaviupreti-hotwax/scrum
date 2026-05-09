@@ -86,7 +86,7 @@ This document collects links shared by mentors and team members, organized by to
 - Celebration photos/videos drive: https://drive.google.com/drive/folders/1y6gJd52EDl8KouAB3Ljfk8gZFN1asA8w?usp=sharing
 
 ## 9. Local Copy Available
-- Query PDF copied to repository root: `Query.pdf`
+- Query PDF copied to resources folder: `Query.pdf`
   - Shared by: Yash Jain
   - Subject: Database Query Optimization Practices and Cost Analysis
   - Original path: `file:///home/vaibhaviupreti/Downloads/Query.pdf`
@@ -96,3 +96,6 @@ This document collects links shared by mentors and team members, organized by to
 ### Notes
 - The above links are organized by topic and source when available.
 - If more articles are shared later, add them to the relevant section above.
+
+
+ 
