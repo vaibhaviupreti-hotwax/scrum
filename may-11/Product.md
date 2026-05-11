@@ -356,3 +356,152 @@ This is the **customer-facing name**. This is what appears on the website, the i
 | **Used in** | OMS search, sync, logs | Website, invoice, packing slip |
 | **Can be "ugly"?** | Yes | No (must be professional) |
 | **Always filled?** | Yes | Sometimes blank on virtuals |
+
+---
+
+## Primary Category vs. Category Membership
+
+HotWax uses a dual-category system to provide both structural integrity and marketing flexibility.
+
+> [!TIP]
+> **The Analogy**: Think of it as your **Home Address** vs. **Places you visit**. 
+> - `primaryProductCategoryId` is your permanent home address.
+> - `ProductCategoryMember` records every place you've ever been or currently belong to.
+
+---
+
+### 1. `primaryProductCategoryId` (Inside the `Product` Entity)
+This is a direct field on the product record. Think of it as the product's **Primary Identity**.
+
+- **Quantity**: A product can have only one (or zero) primary category.
+- **Purpose (The "Home" Category)**:
+    - **Breadcrumbs**: It determines the default path shown on a website (e.g., *Home > Apparel > T-Shirts > [Product]*).
+    - **Logic Defaults**: Often used to inherit tax rules or shipping settings if they aren't defined on the product itself.
+    - **Reporting**: Essential for "clean" sales reports where every product belongs to exactly one department (no double-counting).
+    - **Solr Faceting**: The search engine uses this as the "Main" facet for the product.
+
+### 2. `productCategoryId` (Inside the `ProductCategoryMember` Entity)
+This is a link in a separate table. It defines **Membership** or **Tagging**.
+
+- **Quantity**: A product can have infinite memberships.
+- **Purpose (Discovery & Marketing)**:
+    - **Multiple Placements**: A "Red Running Shoe" can be a member of "Men's Shoes," "Running Gear," "New Arrivals," and "Sale Items" simultaneously.
+    - **Seasonal Collections**: You can add products to a "Summer 2024" category using `fromDate` and `thruDate` without changing their "Home" category.
+    - **Search Filters**: Powers the "Refine By" filters (e.g., Filtering by "Material: Cotton").
+    - **Browsing**: When a customer clicks on "Sale Items," the system queries `ProductCategoryMember` to find all linked products.
+
+---
+
+### Comparison: Primary Category vs. Membership
+
+| Feature          | `primaryProductCategoryId`                  | `ProductCategoryMember`                      |
+| :--------------- | :------------------------------------------ | :------------------------------------------- |
+| **Table**        | `Product`                                   | `ProductCategoryMember`                      |
+| **Relationship** | 1-to-1 (Product has one Home)               | Many-to-Many (Product has many Tags)         |
+| **Data Type**    | Foreign Key (pointing to `ProductCategory`) | Part of a Composite Primary Key              |
+| **Timing**       | Static (Permanent)                          | Temporal (has `fromDate`/`thruDate`)         |
+| **Best For**     | Breadcrumbs, Reports, Tax logic             | Navigating, Sales, Promotions                |
+
+**Why do we need both?** 
+If we only had `ProductCategoryMember`, the website wouldn't know which category is the "main" one to show in the URL. If we only had `primaryProductCategoryId`, we could never put a product in more than one category at a time. This system provides **One Home, Many Doors**.
+
+---
+
+## Inventory Item Types: How the System Counts
+
+The `inventoryItemTypeId` determines the fundamental logic for how a product is tracked, counted, and fulfilled in the warehouse.
+
+### 1. `NON_SERIAL_INV_ITEM` (Non-Serialized)
+Used for identical items where you only care about the **total quantity**.
+
+- **Analogy**: A box of 500 identical blue pens. You don't care which specific pen you pick; you just need to know there are 500 in the box.
+- **Database Behavior**: 
+    - The system creates **one** `InventoryItem` record for that product per warehouse/facility.
+    - The `quantityOnHandTotal` field stores the bulk count (e.g., `500`).
+- **Fulfillment**: The system simply subtracts `1` from the total count during shipment.
+- **Typical Products**: T-shirts, water bottles, socks, groceries.
+
+### 2. `SERIALIZED_INV_ITEM` (Serialized)
+Used for high-value items where **every single unit is unique** and must be tracked individually.
+
+- **Analogy**: iPhones. Every iPhone has a unique IMEI/Serial Number. You must know exactly which specific unit was sold for warranty and security purposes.
+- **Database Behavior**: 
+    - The system creates a **separate `InventoryItem` record for every single physical unit**.
+    - If you have 500 iPhones, you have 500 distinct records.
+    - Each record has `quantityOnHandTotal = 1` and a unique `serialNumber`.
+- **Fulfillment**: You must scan the **specific serial number** during packing. The system then marks that unique record as `DELIVERED`.
+- **Typical Products**: Smartphones, Laptops, Luxury Watches, Electronics.
+
+---
+
+### Comparison: Non-Serialized vs. Serialized
+
+| Feature | `NON_SERIAL_INV_ITEM` | `SERIALIZED_INV_ITEM` |
+| :--- | :--- | :--- |
+| **Tracking Method** | By Quantity (Bulk Sum) | By Unique Serial Number |
+| **Database Records** | 1 Record = Many Units | 1 Record = 1 Unit |
+| **Scanning at Picking** | Scan SKU once, pick quantity | Scan every single unit's Serial # |
+| **Fulfillment Logic** | `Total - 1` | Update specific record to `DELIVERED` |
+| **Cost of Management** | Low (Fast processing) | High (Requires intense scanning) |
+| **Best For** | Low-cost, mass-produced items | High-value, warrantied items |
+
+> [!IMPORTANT]
+> The `inventoryItemTypeId` defaults to `NON_SERIAL_INV_ITEM` for most retail products to keep operations fast. You only switch to `SERIALIZED` if the business explicitly requires individual unit tracking.
+
+---
+
+## Implementation Lifecycle: Where the Type Matters
+
+The inventory type isn't just a label—it changes the behavior of the code at every step.
+
+### 1. Product Definition (The "Master Switch")
+- **Location**: Managed in the `Product` entity.
+- **Implementation**: When creating a product in the HotWax UI (`CreateProduct.ftl`), the "Serialized" checkbox determines this value.
+- **Code Reference**: `ProductWorker.java` contains an `isSerialized()` method that checks if the field is set to `SERIALIZED_INV_ITEM`.
+
+### 2. Receiving (The "Point of Entry")
+- **Implementation**: Handled in `ShipmentReceiptServices.xml` and the Receive Purchase Order screen (`ReceivePurchaseOrder.ftl`).
+- **Logic**:
+    - **Non-Serial**: UI shows a single "Quantity" box. Entering "50" creates one record with a total of 50.
+    - **Serialized**: UI prompts for 50 unique serial numbers. The system creates 50 separate `InventoryItem` records, each with `quantity=1`.
+
+### 3. Fulfillment (Picking & Packing)
+- **Implementation**: `PicklistServices.xml` and `IssuanceServices.xml`.
+- **Logic**:
+    - **Non-Serial**: Picklist says: "Grab 2 units from Bin 5."
+    - **Serialized**: Picklist says: "Grab 2 units from Bin 5 AND scan the serial numbers of the specific units picked."
+- **Database**: The `ItemIssuance` entity records the specific `inventoryItemId` (which, for serialized items, links to a specific serial number).
+
+### 4. Inventory Calculations (ATP)
+- **Implementation**: `InventoryServices.java`.
+- **Logic**:
+    - **Non-Serial**: Reads the `availableToPromiseTotal` directly from the single summary record.
+    - **Serialized**: Performs a `COUNT` of all individual `InventoryItem` records for that product with a status of `INV_AVAILABLE`.
+
+---
+
+### Implementation Summary: The "Where"
+
+| Context | Implementation Point | Action based on Type |
+| :--- | :--- | :--- |
+| **Setup** | `Product` Entity | Sets the tracking rule for the product lifecycle. |
+| **Inbound** | `ShipmentReceiptServices` | Decides whether to create 1 bulk record or many unique records. |
+| **Storage** | `InventoryItem` Table | Determines if the `serialNumber` column must be populated. |
+| **Outbound** | `PicklistServices` | Determines if the packer must scan a unique unit ID. |
+| **UI** | `ReceiveProduct.ftl` | Switches between a "Quantity" input and a "Serial #" list. |
+
+---
+
+## Product Type Behavior: Physical vs. Digital
+
+The combination of `isPhysical` and `isDigital` flags in the `ProductType` seed data determines whether an item requires warehouse operations or can be fulfilled instantly.
+
+| Product Type | `isPhysical` | `isDigital` | Behavior |
+| :--- | :---: | :---: | :--- |
+| **FINISHED_GOOD** | **Y** | **N** | Requires warehouse picking + carrier shipping. |
+| **SERVICE** | **N** | **N** | No shipping; completes upon order payment. |
+| **DIGITAL_GOOD** | **N** | **Y** | No shipping; triggers automated download/email. |
+| **ASSET_USAGE** | **Y** | **N** | Rental logic (expects the item to be returned). |
+
+> [!NOTE]
+> The `isPhysical` flag is the master switch that determines if an item needs to enter the warehouse flow or if it can be fulfilled "instantly" by the system.
