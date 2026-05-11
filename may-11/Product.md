@@ -41,17 +41,23 @@
 
 ## Entity Quick Reference
 
-| Concern                         | Stored In                |
-| :------------------------------ | :----------------------- |
-| **Core product**                | `Product`                |
-| **Product type**                | `ProductType`            |
-| **SKU/barcode**                 | `GoodIdentification`     |
-| **Parent-child relation**       | `ProductAssoc`           |
-| **Features like color/size**    | `ProductFeature`         |
-| **Applying feature to product** | `ProductFeatureAppl`     |
-| **Categories**                  | `ProductCategoryMember`  |
-| **Pricing**                     | `ProductPrice`           |
-| **Store visibility**            | `ProductStoreCatalog`    |
+| Layer | Concern | Primary Entity |
+| :--- | :--- | :--- |
+| **Identity** | Core product record | `Product` |
+| | Product classifications | `ProductType` |
+| | SKUs, Barcodes, Shopify IDs | `GoodIdentification` |
+| | Flexible metadata & flags | `ProductAttribute` |
+| **Structure** | Parent-child & Bundles | `ProductAssoc` |
+| **Variation** | Feature categories (Color/Size) | `ProductFeatureType` |
+| | Feature values (Red/Small) | `ProductFeature` |
+| | Linking features to products | `ProductFeatureAppl` |
+| **Organization** | Product categories (Shelves) | `ProductCategory` |
+| | Category membership | `ProductCategoryMember` |
+| | Category hierarchy (Rollups) | `ProductCategoryRollup` |
+| **Storefront** | Store rules & settings | `ProductStore` |
+| | Product catalogs | `ProdCatalog` |
+| | Store-to-Catalog mapping | `ProductStoreCatalog` |
+| | Catalog-to-Category mapping | `ProdCatalogCategory` |
 
 ---
 
@@ -223,30 +229,166 @@ The `GoodIdentification` table allows you to link one internal `productId` (like
 | `10001` | **`UPCA`** | `885001234567` | The Barcode Scanner |
 | `10001` | **`EAN`** | `5012345678901` | European Retailers |
 | `10001` | **`HS_CODE`** | `6109.10.00` | International Customs |
-| `10001` | **`SHOPIFY_ID`** | `gid://shopify/Product/123` | The Shopify Sync |
+| `10001` | **`SHOPIFY_PROD_ID`** | `gid://shopify/Product/123` | The Shopify Sync |
 
-#### Architectural Significance
-- **Decoupling**: Changing a SKU during re-branding only requires updating the `GoodIdentification` record, preserving internal `productId` history.
-- **Search Performance**: Barcode scans perform a high-speed lookup on the `idValue` index rather than searching the main `Product` table.
-- **Composite Primary Key**: `[productId, goodIdentificationTypeId]`. This ensures one product has only one value per identification type (e.g., one SKU per product).
+#### The "Rulebook": `GoodIdentificationType`
+Think of `GoodIdentificationType` as the **Rulebook** for naming products. It defines the **categories** of numbers allowed in the system.
+
+- **Metadata Table**: You cannot add an ID to a product unless the type (e.g., "SKU") is first defined here.
+- **Hierarchy (`parentTypeId`)**: In your system, the parent type is **`HC_GOOD_ID_TYPE`**. Identifiers like `SKU`, `UPCA`, and `ISBN` all sit under this parent to be treated as scannable IDs.
+- **Shopify Specifics**: Your system uses distinct types for Shopify mapping: `SHOPIFY_PROD_ID`, `SHOPIFY_PROD_SKU`, and `SHOPIFY_PROD_UPCA`.
+
+#### Architectural Insight: Lookup vs. Operational Data
+There is a design distinction between `GoodIdentification` and `ProductAttribute`:
+- **`GoodIdentification`**: Stores IDs used to **find** a product (e.g., `SHOPIFY_PROD_ID`). This table is queried heavily for lookups.
+- **`ProductAttribute`**: Stores IDs used **after** a product is found (e.g., `SHOPIFY_INV_ITEM_ID`). This is operational data used for the *next* step in a process.
+- **Rule of Thumb**: If the ID is used to find the product — `GoodIdentification`. If it's used after — `ProductAttribute`.
 
 ---
 
-## MENTAL MAP: READING IN CLUSTERS
-To understand the full architecture, read the entities in functional clusters:
+### Entity 5: `ProductAttribute` — The Dynamic Extension
+`ProductAttribute` is the **"Blank Canvas"** table for a product, using an **EAV (Entity-Attribute-Value)** model.
 
-1.  **Product Identity**: `ProductType` → `Product` → `GoodIdentification`.
-2.  **Product Relationships**: `Product` → `ProductAssoc`.
-3.  **Features & Attributes**: `ProductFeature` → `ProductFeatureAppl`.
-4.  **Store & Shopify Visibility**: `ProductStore` → `ShopifyShop` → `ShopifyShopProduct`.
-5.  **Inventory & Stock**: `Product` → `InventoryItem` → `InventoryItemDetail`.
+- **The Structure**: `productId`, `attrName` (e.g., `fabric_care`), and `attrValue` (e.g., `Machine wash cold`).
+- **Significance**: Unlike other tables, this has **no Type table**. You can literally make up any `attrName` on the fly.
+- **Shopify Sync Usage**: Used for "extra" Shopify data that doesn't fit standard boxes.
+
+| `attrName` | `attrValue` | Purpose |
+| :--- | :--- | :--- |
+| **`is_preorder`** | `Y` | Tells the OMS to treat this as a pre-order item. |
+| **`shopify_status`** | `active` | Mirrors the product status from Shopify Admin. |
+| **`sync_error_log`** | `Missing weight field` | Stores debugging info if a sync fails. |
+
+---
+
+### Entity 6: `ProductFeatureType` — The Rulebook for Variations
+`ProductFeatureType` is the **"Question"** part of the variation system (e.g., "What color is this?").
+
+- **The Structure**: `productFeatureTypeId` (e.g., `COLOR`), `description`, and `parentTypeId`.
+- **Common Seed Records**: `COLOR`, `SIZE`, `BRAND`, `FABRIC`, `STYLE`.
+- **Website Logic**: Powers the filters and dropdowns. The website queries this table to know which "Questions" to ask the customer.
+
+### Entity 7: `ProductFeature` — The Global Dictionary
+If `ProductFeatureType` is the Question, `ProductFeature` is the **Answer** (e.g., "Red").
+
+- **The Core Purpose**: It is a **Global Dictionary**. You define "Cotton" once here and link it to thousands of products.
+- **The Structure**: `productFeatureId`, `productFeatureTypeId` (FK), `description`, and `uomId`.
+- **Technical Power**: The `uomId` (Unit of Measure) allows for math and sorting on features like "Length" or "Weight."
+
+### Entity 8: `ProductFeatureApplType` — The Role
+Before applying a feature, you must decide its role:
+1.  **`SELECTABLE_FEATURE`**: Used on **Virtual Products** (Dropdown options).
+2.  **`STANDARD_FEATURE`**: Used on **Variant Products** (The actual fact of the SKU).
+3.  **`DISTINGUISHING_FEATURE`**: Used for search highlights (e.g., "Waterproof").
+
+### Entity 9: `ProductFeatureAppl` — The Junction
+This is the **"Glue"** that connects your product definitions to your variation dictionary.
+
+- **The Structure**: `productId`, `productFeatureId`, `productFeatureApplTypeId`, and `fromDate`.
+- **Feature Inheritance**: It keeps data clean by explicitly stating whether a feature is a customer choice or a manufacturing fact.
+- **Analogy**: If `Product` is a **Person** and `ProductFeature` is a **Shirt**, then `ProductFeatureAppl` is the **Act of Wearing the Shirt**.
+
+---
+
+### Entity 10: `ProductCategory` — The Shelf
+Think of `ProductCategory` as the **"Physical Shelf"** in a store.
+
+- **The Rulebook: `ProductCategoryType`**: Defines the nature of the shelf (`CATALOG_CATEGORY`, `PROMOTIONAL_CATEGORY`, `TAX_CATEGORY`).
+- **Key Fields**: `productCategoryId`, `categoryName`, `description`.
+
+### Entity 11: `ProductCategoryMember` — The Placement
+The **Junction Table** that puts a `Product` onto a `Category`.
+
+- **Structure**: `productId`, `productCategoryId`, `sequenceNum`.
+- **Many-to-Many**: A product can be a member of multiple categories (e.g., "Shoes" and "Sale Items") simultaneously.
+- **Sequence Logic**: The `sequenceNum` determines which product appears **first** on the collection page.
+
+### Entity 12: `ProductCategoryRollup` — The Hierarchy
+The "Hidden" table that allows for **Sub-categories** (e.g., Men's Apparel → T-Shirts).
+
+- **Structure**: `productCategoryId` (Child) and `parentProductCategoryId` (Parent).
+
+| Feature | `ProductCategory` | `ProductCategoryMember` | `ProductCategoryRollup` |
+| :--- | :--- | :--- | :--- |
+| **Analogy** | The Shelf itself. | Putting an item on the shelf. | Nailing a small shelf onto a big shelf. |
+| **Logic** | Defines the "Where". | Defines the "What's inside". | Defines the "Tree Structure". |
+
+---
+
+## Phase 15–18: The Storefront Layer (Catalogs & Stores)
+
+If the **Category** is the **Shelf**, then the **Catalog** is the **Section of the Store** (e.g., "Clothing Department"), and the **ProductStore** is the **Physical Store Location** or **Website Domain** itself.
+
+### Entity 13: `ProductStore` (The Storefront)
+This is the highest level of organization. A `ProductStore` represents a single point of sale—like your Shopify website.
+
+- **Purpose**: It holds the business rules for a store (e.g., which currency to use, which warehouse to ship from, which catalog to show).
+- **Key Fields**: `productStoreId`, `storeName`, `defaultCurrencyUomId`, `inventoryFacilityId`.
+- **Shopify Link**: In the Shopify Sync, the `productStoreId` is the primary context used to load all configuration rules.
+
+### Entity 14: `ProdCatalog` (The Department)
+A `ProdCatalog` is a collection of categories. It allows you to group different sections of your store into one manageable unit.
+
+- **Purpose**: It acts as a container. You might have one "Main Catalog" for your website and a different "Internal Catalog" for your warehouse team.
+- **Key Fields**: `prodCatalogId`, `catalogName`.
+
+### Entity 15: `ProductStoreCatalog` (The Store Link)
+This is the **Junction Table** that decides which **Catalog** is shown in which **Store**.
+
+- **Structure**: `productStoreId`, `prodCatalogId`, `fromDate`, `sequenceNum`.
+- **Architectural Logic**: One store can have multiple catalogs (e.g., "Seasonal Catalog" + "Permanent Catalog"). The `sequenceNum` decides which one appears first in the navigation menu.
+
+### Entity 16: `ProdCatalogCategory` (The Catalog Link)
+This is the final **Junction Table** that connects a **Category** (Shelf) to a **Catalog** (Department).
+
+- **Structure**: `prodCatalogId`, `productCategoryId`, `prodCatalogCategoryTypeId`.
+- **Types of Links**:
+    - **`PCCT_BROWSE_ROOT`**: This is the "Main Menu" category. Everything inside this category will appear on the website's homepage.
+    - **`PCCT_SEARCH`**: This category is used for the search bar logic.
+    - **`PCCT_PROMOTIONS`**: Used for the "Featured Deals" section.
+
+---
+
+## ENTITY NAMING CONVENTIONS
+
+HotWax/OFBiz follows strict naming patterns for "Add-on" or "Extension" tables. If you know the main table name (`XYZ`), you can guess its extensions:
+
+1.  **The "Attribute" Pattern**: `XYZAttribute` (Generic Name-Value pairs for metadata).
+2.  **The "Type Attribute" Pattern**: `XYZTypeAttr` (Defines which attributes are allowed for a specific type).
+3.  **The "Content" Pattern**: `XYZContent` (For images, PDFs, or long-form text).
+4.  **The "Assoc" Pattern**: `XYZAssoc` (For linking two entities of the same type).
+5.  **The "Role" Pattern**: `XYZRole` (For linking people or companies to the entity).
+
+---
+
+## ROADMAP: STUDY & OPERATIONS SEQUENCE
+
+### Part 1: The Learning Sequence (Recommended Study Order)
+1.  **The Rulebooks**: Type Tables.
+2.  **The Anchor**: `Product`.
+3.  **The Identities**: `GoodIdentification`.
+4.  **The Structure**: `ProductAssoc`.
+5.  **The Warehouse Layer**: `Facility`, `InventoryItem`, `ProductFacility`.
+6.  **The Integration Layer**: `ShopifyShop`, `ShopifyShopProduct`.
+
+### Part 2: The Data Entry Sequence (Sync Flow)
+| Order | Entity | Action | Architectural Reason |
+| :--- | :--- | :--- | :--- |
+| **1** | **`Product`** (Virtual) | Insert/Update | Parent must exist first. |
+| **2** | **`Product`** (Variant) | Insert/Update | Create the physical unit. |
+| **3** | **`ProductAssoc`** | Insert | Link Variant to Virtual. |
+| **4** | **`GoodIdentification`** | Insert/Update | Attach SKU/Barcode. |
+| **5** | **`ProductFeatureAppl`** | Insert | Apply Size/Color attributes. |
+| **6** | **`ProductCategoryMember`** | Insert | Place into Catalog/Category. |
+| **7** | **`ShopifyShopProduct`** | Insert/Update | **Critical**: Map HotWax ID to Shopify ID. |
+| **8** | **`ProductPrice`** | Insert/Update | Set the selling price. |
+| **9** | **`InventoryItem`** | Insert/Update | Initialize stock levels. |
 
 ---
 
 ## DATA QUALITY & DIAGNOSTICS
 
 ### Shipping Weight Audit
-Missing weight on physical variants leads to shipping rate errors and carrier rejections.
 ```sql
 SELECT p.PRODUCT_ID, p.INTERNAL_NAME, p.WEIGHT_UOM_ID, p.SHIPPING_WEIGHT
 FROM PRODUCT p
@@ -254,7 +396,6 @@ WHERE p.IS_VARIANT = 'Y' AND p.WEIGHT_UOM_ID IS NULL AND p.PRODUCT_TYPE_ID = 'FI
 ```
 
 ### Orphan Variant Detection
-Orphan variants claim to be children but lack a parent link in `PRODUCT_ASSOC`.
 ```sql
 SELECT p.PRODUCT_ID, p.INTERNAL_NAME
 FROM PRODUCT p
@@ -266,70 +407,11 @@ AND NOT EXISTS (SELECT 1 FROM PRODUCT_ASSOC pa WHERE pa.PRODUCT_ID_TO = p.PRODUC
 
 ## TECHNICAL Q&A
 - **Q: Why is `fromDate` in the `ProductAssoc` PK?**
-    - It allows for **Relationship History**. You can link Product A to Product B multiple times across time with different quantities.
-- **Q: When is weight managed at the parent level?**
-    - Best when all variants weigh the same. For different weights, manage at the child level.
-
-
-
----
-To study the data effectively, you should follow the **Dependency Sequence**. In database terms, you study the ## ROADMAP: STUDY & OPERATIONS SEQUENCE
-
-To study the HotWax data model effectively, you should follow the **Dependency Sequence**. In database terms, this means studying the tables that "stand alone" (Primary Anchors) first, and then moving to the tables that "point" to them (Foreign Keys).
-
-### Part 1: The Learning Sequence (Recommended Study Order)
-If you are querying the database to understand the system architecture, follow this order:
-
-1.  **The Rulebooks (Type Tables)**: 
-    *   `ProductType`, `ProductAssocType`, `GoodIdentificationType`.
-    *   *Why?* You must understand the categories (e.g., "What is a Finished Good?") before looking at actual products.
-2.  **The Anchor**: 
-    *   `Product`.
-    *   *Why?* Almost every other table in the system relies on a `productId` pointing here.
-3.  **The Identities**: 
-    *   `GoodIdentification`.
-    *   *Why?* This is the "Bridge" that allows you to find recognizable SKUs for internal Database IDs.
-4.  **The Structure**: 
-    *   `ProductAssoc`.
-    *   *Why?* Explains how the products you've identified are grouped into Parents, Children, and Bundles.
-5.  **The Warehouse Layer**: 
-    *   `Facility`, `InventoryItem`, `ProductFacility`.
-    *   *Why?* Adds the "Physical" layer—how many units exist and where they are located.
-6.  **The Integration Layer**: 
-    *   `ShopifyShop`, `ShopifyShopProduct`.
-    *   *Why?* The final layer connecting internal OMS data to the external Shopify world.
-
----
-
-### Part 2: The Data Entry Sequence (Sync Flow)
-When a Product Sync occurs, the system populates entities in this specific order to maintain **Referential Integrity** and avoid Foreign Key errors:
-
-| Order | Entity | Action | Architectural Reason |
-| :--- | :--- | :--- | :--- |
-| **1** | **`Product`** (Virtual) | Insert/Update | The "Parent" must exist before children or associations. |
-| **2** | **`Product`** (Variant) | Insert/Update | Create the physical, sellable SKU unit. |
-| **3** | **`ProductAssoc`** | Insert | Link Variant to Virtual (requires both IDs to exist). |
-| **4** | **`GoodIdentification`** | Insert/Update | Attach the SKU/Barcode to the Variant. |
-| **5** | **`ProductFeatureAppl`** | Insert | Apply Size/Color attributes to the Variant. |
-| **6** | **`ProductCategoryMember`** | Insert | Place the product into the appropriate Catalog/Category. |
-| **7** | **`ShopifyShopProduct`** | Insert/Update | **Critical**: Map the HotWax ID to the Shopify ID. |
-| **8** | **`ProductPrice`** | Insert/Update | Set the selling price (requires the product to exist). |
-| **9** | **`InventoryItem`** | Insert/Update | Initialize stock levels at the facility. |
-
----
-
-### Part 3: Sequence for Operational Workflows
-
-#### A. Inventory Adjustment (Manual)
-1.  **`InventoryItem`**: Update the `quantityOnHandTotal`.
-2.  **`InventoryItemDetail`**: **Mandatory Step**. Every change in stock must record a "Reason" (e.g., Damaged, Cycle Count) here for auditing.
-3.  **`ProductInventoryItem`**: (View) used to verify the final recalculated totals.
-
-#### B. Order Fulfillment (The "Pick" Flow)
-1.  **`PicklistItem`**: Identifies which specific product is being requested from the shelf.
-2.  **`InventoryItem`**: Validates the `AVAILABLE` status of the unit.
-3.  **`ItemIssuance`**: Links the specific physical unit (`InventoryItem`) to the `OrderItem`.
-4.  **`InventoryItemDetail`**: Finalizes the transaction, recording that the item has left the warehouse.
+    - It allows for **Relationship History**. You can link Product A to Product B multiple times across time.
+- **Q: Attribute vs. Feature vs. Identifier?**
+    - **`GoodIdentification`**: Unique ID used to find the product (SKU).
+    - **`ProductFeature`**: Values a customer selects (Size, Color).
+    - **`ProductAttribute`**: Descriptive metadata or system flags (Washing instructions, Pre-order flag).
 
 > [!TIP]
-> **The Golden Rule of Study**: Always start with **`Product`**. If you don't understand the `productId`, every other table will be confusing. Once you have the ID, move to **`GoodIdentification`** to translate it into a recognizable SKU.
+> **The Golden Rule**: Always start with **`Product`**. If you don't understand the `productId`, every other table will be confusing. Move to **`GoodIdentification`** to translate IDs into recognized SKUs.
