@@ -154,134 +154,22 @@
 
 ---
 
-## Data Model Design Pattern: Main & Type Tables
+## DEEP DIVE: CORE ENTITIES
 
-A key pattern in the HotWax/OFBiz data model is that most "Main" entity tables have a corresponding "Type" table. The Main table stores the actual data, while the Type table defines the categories or behaviors of that data.
+### Entity 1: `Product` — The Anchor
+The `Product` entity is the anchor of this entire data model. Everything else either describes it, organizes it, or tracks its stock.
 
-| Main Table (Data)    | Type Table (Definition)      |
-| :------------------- | :--------------------------- |
-| `Product`            | `ProductType`                |
-| `ProductAssoc`       | `ProductAssocType`           |
-| `GoodIdentification` | `GoodIdentificationType`     |
-| `ProductFeature`     | `ProductFeatureType`         |
-| `ProductFeatureAppl` | `ProductFeatureApplType`     |
+#### Internal Name vs. Product Name
+Understanding the difference between these two naming fields is critical for operations:
 
----
+- **Internal Name (`internalName`)**: This is the **warehouse/operations name**. It is what your internal team uses to identify the product inside the system. These are often technical and "ugly" (e.g., using SKU codes or handles).
+- **Product Name (`productName`)**: This is the **customer-facing name**. This is what appears on the website, the invoice, and the packing slip. It is meant to be clean, readable, and professional.
 
-Product is the anchor of this entire data model. Everything else either:
-- **Describes** the product (`GoodIdentification`, `ProductAttribute`, `ProductFeature`)
-- **Organizes** the product (`ProductCategory`, `ProductCategoryMember`)
-- **Connects** the product to Shopify (`ShopifyShopProduct`)
-- **Tracks** the product's stock (`InventoryItem`, `ProductFacility`)
-
----
-
-## Understanding Type Tables
-The **Type table** serves as a predefined lookup list. It defines the allowed values and behaviors for a corresponding Main table field. 
-
-- **The Dropdown Analogy**: Think of it like a dropdown menu in a form—the Type table defines the options available in that menu.
-- **Example**: `ProductAssocType` contains values like `PRODUCT_VARIANT`, `PRODUCT_COMPONENT`, and `ALSO_BOUGHT`. The `ProductAssoc` table then uses these values to define the specific relationship between two products.
-- **Rule of Thumb**: You **never** store dynamic business data in Type tables. They exist solely to define the rules and categories of the system.
-
----
-
-## Mental Map: Reading the Data Model in Clusters
-
-To understand the full architecture, it's easier to read the entities in **Clusters** rather than all at once. Here is a breakdown of the five functional clusters:
-
-### Cluster 1 — Product Identity (The Core)
-`ProductType` → `Product` → `GoodIdentification` → `GoodIdentificationType`
-- **Focus**: "What is this product and what are its unique identifiers (SKUs/Barcodes)?"
-
-### Cluster 2 — Product Relationships
-`Product` → `ProductAssoc` ← `ProductAssocType`
-- **Focus**: "How are products connected to each other (e.g., Parent/Child, Bundle/Component)?"
-
-### Cluster 3 — Features and Attributes
-`ProductFeatureType` → `ProductFeature` → `ProductFeatureAppl` ← `ProductFeatureApplType`
-- **Focus**: "What options does this product have (e.g., Size, Color, Brand)?"
-
-### Cluster 4 — Store & Shopify Visibility
-`ProductStore` → `ShopifyShop` → `ShopifyShopProduct` → `ShopifyProdLocActivation`
-- **Focus**: "Which store is this product in and how is it mapped to the Shopify environment?"
-
-### Cluster 5 — Inventory & Stock Tracking
-`Product` → `InventoryItem` → `InventoryItemDetail` + `ProductFacility`
-- **Focus**: "How much stock exists, where is it located, and what specific transactions changed the count?"
-
----
-
-## Real-World Scenario: Syncing a "Red Small Cotton T-Shirt"
-
-Here is how the sync flow looks when a specific product moves from Shopify to the OMS:
-
-1.  **ShopifyShop**: The system identifies which specific Shopify store sent the webhook.
-2.  **ProductStore**: It loads the rules for that store (e.g., USD currency, "Main" catalog).
-3.  **ShopifyShopProduct**: Checks if `shopifyProductId` already exists. 
-    - *Result*: If **Yes**, it gets the `productId`. If **No**, it moves to lookup.
-4.  **GoodIdentification**: Looks up the SKU to see if this product exists in the OMS (even if not yet linked to Shopify).
-5.  **Product (Virtual)**: Creates or updates the parent "Cotton T-Shirt" record (`isVirtual=Y`).
-6.  **Product (Variant) + ProductAssoc**: Creates the "Red Small" child record (`isVariant=Y`) and links it to the parent using `PRODUCT_VARIANT`.
-7.  **GoodIdentification**: Saves the specific SKU and barcode for this new variant.
-8.  **ProductFeature + ProductFeatureAppl**: Saves "Red" and "Small" as features and applies them to the variant.
-9.  **ProductCategoryMember**: Places the product into the "Men's Apparel" category.
-10. **ShopifyShopProduct**: Saves the final, permanent mapping between `productId` and `shopifyProductId`.
-11. **InventoryItem + ProductFacility**: Links stock levels to the physical warehouse facility.
-12. **ShopifyProdLocActivation**: Marks which specific Shopify locations this variant should be active in.
-
-> [!NOTE]
-> Every one of these steps corresponds to a "box" in the architectural diagram. The lines in the diagram show exactly how data is handed off from one entity to the next.
-
----
-
-## Data Quality Audit: Shipping Weights
-
-### The "Null Weight" Problem
-A common data quality issue occurs when variants (physical products) are missing weight information. 
-
-**Detection Query:**
-```sql
-SELECT
-    p.PRODUCT_ID,
-    p.PRODUCT_TYPE_ID,
-    p.INTERNAL_NAME,
-    p.WEIGHT_UOM_ID,
-    p.SHIPPING_WEIGHT,
-    parent.PRODUCT_ID        AS PARENT_ID,
-    parent.WEIGHT_UOM_ID     AS PARENT_WEIGHT_UOM,
-    parent.SHIPPING_WEIGHT   AS PARENT_SHIPPING_WEIGHT
-FROM PRODUCT p
-LEFT JOIN PRODUCT_ASSOC pa
-    ON pa.PRODUCT_ID_TO = p.PRODUCT_ID
-    AND pa.PRODUCT_ASSOC_TYPE_ID = 'PRODUCT_VARIANT'
-    AND pa.THRU_DATE IS NULL
-LEFT JOIN PRODUCT parent
-    ON parent.PRODUCT_ID = pa.PRODUCT_ID
-WHERE p.IS_VARIANT = 'Y'
-    AND p.WEIGHT_UOM_ID IS NULL
-    AND p.PRODUCT_TYPE_ID = 'FINISHED_GOOD'
-LIMIT 5;
-```
-
-### Risks of Missing Weight Data
-If `WEIGHT_UOM_ID` is NULL and `SHIPPING_WEIGHT` is 0 (with no parent fallback), it can lead to:
-- **Incorrect Shipping Rates**: Customers might be undercharged for shipping.
-- **Carrier Rejections**: Some carrier APIs will reject shipments with zero weight.
-- **Insurance & Compliance**: High-value items (like jewelry) require accurate weight for declared value and insurance.
-- **Silent Failures**: The system might default to a flat rate, masking the data issue without alerting anyone.
-
----
-
-## Product Hierarchy & Relationships
-
-### Core Definitions
+#### Hierarchy & Relationships
 - **A Variant always has a parent product.**
 - **A Virtual product never has a parent.**
 - **A Standalone product has no parent and no children.**
 
-The `PRODUCT_ASSOC` table is the "truth" for these links. If a product isn't listed as a `PRODUCT_ID_TO` in a `PRODUCT_VARIANT` association, it has no parent.
-
-### Matrix: Identifying Product States
 | IS_VIRTUAL | IS_VARIANT | Description |
 | :---: | :---: | :--- |
 | **Y** | **N** | ✅ **Virtual Parent**: The top of the hierarchy. |
@@ -292,209 +180,15 @@ The `PRODUCT_ASSOC` table is the "truth" for these links. If a product isn't lis
 
 ---
 
-## Orphan Variant Detection
+### Entity 2: `ProductType` — The Classifier
+The `ProductType` defines the categories or behaviors of the product data.
 
-"Orphan variants" are products marked as `IS_VARIANT = 'Y'` that are missing a corresponding entry in the `PRODUCT_ASSOC` table.
+#### The `HAS_TABLE` Pattern
+Every product type—including `FINISHED_GOOD`, `MARKETING_PKG_PICK`, and `DIGITAL_GOOD`—stores all its necessary data directly inside the main **`PRODUCT`** table (`HAS_TABLE = 'N'`).
+- **Rationale**: None of these types require specialized fields that aren't already available in the standard `Product` entity.
 
-**Detection Query:**
-```sql
-SELECT p.PRODUCT_ID,
-       p.INTERNAL_NAME,
-       p.PRODUCT_NAME
-FROM PRODUCT p
-WHERE p.IS_VARIANT = 'Y'
-AND NOT EXISTS (
-    SELECT 1
-    FROM PRODUCT_ASSOC pa
-    WHERE pa.PRODUCT_ID_TO = p.PRODUCT_ID
-    AND pa.PRODUCT_ASSOC_TYPE_ID = 'PRODUCT_VARIANT'
-);
-```
-
-### Common Causes for Orphans
-| Cause | Description |
-| :--- | :--- |
-| **Broken Shopify Sync** | The parent was not imported or the sync failed mid-way. |
-| **Parent Deletion** | The parent was removed from the system, but the variants were left behind. |
-| **Incomplete Migration** | Only specific sellable SKUs were migrated without their virtual parents. |
-| **Incorrect Flagging** | A product was accidentally marked as a variant during manual entry. |
-
----
-
-## Technical Q&A
-- **Q: When is weight managed at the parent level vs. child level?**
-    - **Parent Level**: Best for products where all variants weigh the same (e.g., different colors of the same t-shirt).
-    - **Child Level**: Essential when variants have different weights (e.g., a 1lb box vs. a 5lb box of the same product).
-    - **Best Practice**: Always check the parent if the child's weight is NULL.
-
----
-
-## Internal Name vs. Product Name
-
-Understanding the difference between these two naming fields is critical for operations:
-
-### 1. Internal Name (`internalName`)
-This is the **warehouse/operations name**. It is what your internal team uses to identify the product inside the system. These are often technical and "ugly" (e.g., using SKU codes or handles).
-
-**Rules:**
-- **Practically Mandatory**: It should always be filled in.
-- **Search-Friendly**: Must be unique enough to find the product without confusion.
-- **Flexible Format**: No strict formatting rules—can be a SKU, a handle, a code, etc.
-- **OMS Focused**: Used heavily in search, lookups, sync processes, and logs.
-
-### 2. Product Name (`productName`)
-This is the **customer-facing name**. This is what appears on the website, the invoice, and the packing slip. It is meant to be clean, readable, and professional for display purposes.
-
----
-
-### Comparison: Internal vs. Product Name
-
-| Feature | Internal Name | Product Name |
-| :--- | :--- | :--- |
-| **Audience** | Your internal team | Your customers |
-| **Example** | `V_abominable-hoodie` | `Abominable Hoodie` |
-| **Used in** | OMS search, sync, logs | Website, invoice, packing slip |
-| **Can be "ugly"?** | Yes | No (must be professional) |
-| **Always filled?** | Yes | Sometimes blank on virtuals |
-
----
-
-## Primary Category vs. Category Membership
-
-HotWax uses a dual-category system to provide both structural integrity and marketing flexibility.
-
-> [!TIP]
-> **The Analogy**: Think of it as your **Home Address** vs. **Places you visit**. 
-> - `primaryProductCategoryId` is your permanent home address.
-> - `ProductCategoryMember` records every place you've ever been or currently belong to.
-
----
-
-### 1. `primaryProductCategoryId` (Inside the `Product` Entity)
-This is a direct field on the product record. Think of it as the product's **Primary Identity**.
-
-- **Quantity**: A product can have only one (or zero) primary category.
-- **Purpose (The "Home" Category)**:
-    - **Breadcrumbs**: It determines the default path shown on a website (e.g., *Home > Apparel > T-Shirts > [Product]*).
-    - **Logic Defaults**: Often used to inherit tax rules or shipping settings if they aren't defined on the product itself.
-    - **Reporting**: Essential for "clean" sales reports where every product belongs to exactly one department (no double-counting).
-    - **Solr Faceting**: The search engine uses this as the "Main" facet for the product.
-
-### 2. `productCategoryId` (Inside the `ProductCategoryMember` Entity)
-This is a link in a separate table. It defines **Membership** or **Tagging**.
-
-- **Quantity**: A product can have infinite memberships.
-- **Purpose (Discovery & Marketing)**:
-    - **Multiple Placements**: A "Red Running Shoe" can be a member of "Men's Shoes," "Running Gear," "New Arrivals," and "Sale Items" simultaneously.
-    - **Seasonal Collections**: You can add products to a "Summer 2024" category using `fromDate` and `thruDate` without changing their "Home" category.
-    - **Search Filters**: Powers the "Refine By" filters (e.g., Filtering by "Material: Cotton").
-    - **Browsing**: When a customer clicks on "Sale Items," the system queries `ProductCategoryMember` to find all linked products.
-
----
-
-### Comparison: Primary Category vs. Membership
-
-| Feature          | `primaryProductCategoryId`                  | `ProductCategoryMember`                      |
-| :--------------- | :------------------------------------------ | :------------------------------------------- |
-| **Table**        | `Product`                                   | `ProductCategoryMember`                      |
-| **Relationship** | 1-to-1 (Product has one Home)               | Many-to-Many (Product has many Tags)         |
-| **Data Type**    | Foreign Key (pointing to `ProductCategory`) | Part of a Composite Primary Key              |
-| **Timing**       | Static (Permanent)                          | Temporal (has `fromDate`/`thruDate`)         |
-| **Best For**     | Breadcrumbs, Reports, Tax logic             | Navigating, Sales, Promotions                |
-
-**Why do we need both?** 
-If we only had `ProductCategoryMember`, the website wouldn't know which category is the "main" one to show in the URL. If we only had `primaryProductCategoryId`, we could never put a product in more than one category at a time. This system provides **One Home, Many Doors**.
-
----
-
-## Inventory Item Types: How the System Counts
-
-The `inventoryItemTypeId` determines the fundamental logic for how a product is tracked, counted, and fulfilled in the warehouse.
-
-### 1. `NON_SERIAL_INV_ITEM` (Non-Serialized)
-Used for identical items where you only care about the **total quantity**.
-
-- **Analogy**: A box of 500 identical blue pens. You don't care which specific pen you pick; you just need to know there are 500 in the box.
-- **Database Behavior**: 
-    - The system creates **one** `InventoryItem` record for that product per warehouse/facility.
-    - The `quantityOnHandTotal` field stores the bulk count (e.g., `500`).
-- **Fulfillment**: The system simply subtracts `1` from the total count during shipment.
-- **Typical Products**: T-shirts, water bottles, socks, groceries.
-
-### 2. `SERIALIZED_INV_ITEM` (Serialized)
-Used for high-value items where **every single unit is unique** and must be tracked individually.
-
-- **Analogy**: iPhones. Every iPhone has a unique IMEI/Serial Number. You must know exactly which specific unit was sold for warranty and security purposes.
-- **Database Behavior**: 
-    - The system creates a **separate `InventoryItem` record for every single physical unit**.
-    - If you have 500 iPhones, you have 500 distinct records.
-    - Each record has `quantityOnHandTotal = 1` and a unique `serialNumber`.
-- **Fulfillment**: You must scan the **specific serial number** during packing. The system then marks that unique record as `DELIVERED`.
-- **Typical Products**: Smartphones, Laptops, Luxury Watches, Electronics.
-
----
-
-### Comparison: Non-Serialized vs. Serialized
-
-| Feature | `NON_SERIAL_INV_ITEM` | `SERIALIZED_INV_ITEM` |
-| :--- | :--- | :--- |
-| **Tracking Method** | By Quantity (Bulk Sum) | By Unique Serial Number |
-| **Database Records** | 1 Record = Many Units | 1 Record = 1 Unit |
-| **Scanning at Picking** | Scan SKU once, pick quantity | Scan every single unit's Serial # |
-| **Fulfillment Logic** | `Total - 1` | Update specific record to `DELIVERED` |
-| **Cost of Management** | Low (Fast processing) | High (Requires intense scanning) |
-| **Best For** | Low-cost, mass-produced items | High-value, warrantied items |
-
-> [!IMPORTANT]
-> The `inventoryItemTypeId` defaults to `NON_SERIAL_INV_ITEM` for most retail products to keep operations fast. You only switch to `SERIALIZED` if the business explicitly requires individual unit tracking.
-
----
-
-## Implementation Lifecycle: Where the Type Matters
-
-The inventory type isn't just a label—it changes the behavior of the code at every step.
-
-### 1. Product Definition (The "Master Switch")
-- **Location**: Managed in the `Product` entity.
-- **Implementation**: When creating a product in the HotWax UI (`CreateProduct.ftl`), the "Serialized" checkbox determines this value.
-- **Code Reference**: `ProductWorker.java` contains an `isSerialized()` method that checks if the field is set to `SERIALIZED_INV_ITEM`.
-
-### 2. Receiving (The "Point of Entry")
-- **Implementation**: Handled in `ShipmentReceiptServices.xml` and the Receive Purchase Order screen (`ReceivePurchaseOrder.ftl`).
-- **Logic**:
-    - **Non-Serial**: UI shows a single "Quantity" box. Entering "50" creates one record with a total of 50.
-    - **Serialized**: UI prompts for 50 unique serial numbers. The system creates 50 separate `InventoryItem` records, each with `quantity=1`.
-
-### 3. Fulfillment (Picking & Packing)
-- **Implementation**: `PicklistServices.xml` and `IssuanceServices.xml`.
-- **Logic**:
-    - **Non-Serial**: Picklist says: "Grab 2 units from Bin 5."
-    - **Serialized**: Picklist says: "Grab 2 units from Bin 5 AND scan the serial numbers of the specific units picked."
-- **Database**: The `ItemIssuance` entity records the specific `inventoryItemId` (which, for serialized items, links to a specific serial number).
-
-### 4. Inventory Calculations (ATP)
-- **Implementation**: `InventoryServices.java`.
-- **Logic**:
-    - **Non-Serial**: Reads the `availableToPromiseTotal` directly from the single summary record.
-    - **Serialized**: Performs a `COUNT` of all individual `InventoryItem` records for that product with a status of `INV_AVAILABLE`.
-
----
-
-### Implementation Summary: The "Where"
-
-| Context | Implementation Point | Action based on Type |
-| :--- | :--- | :--- |
-| **Setup** | `Product` Entity | Sets the tracking rule for the product lifecycle. |
-| **Inbound** | `ShipmentReceiptServices` | Decides whether to create 1 bulk record or many unique records. |
-| **Storage** | `InventoryItem` Table | Determines if the `serialNumber` column must be populated. |
-| **Outbound** | `PicklistServices` | Determines if the packer must scan a unique unit ID. |
-| **UI** | `ReceiveProduct.ftl` | Switches between a "Quantity" input and a "Serial #" list. |
-
----
-
-## Product Type Behavior: Physical vs. Digital
-
-The combination of `isPhysical` and `isDigital` flags in the `ProductType` seed data determines whether an item requires warehouse operations or can be fulfilled instantly.
+#### Physical vs. Digital Behavior
+The combination of `isPhysical` and `isDigital` flags determines whether an item requires warehouse operations.
 
 | Product Type | `isPhysical` | `isDigital` | Behavior |
 | :--- | :---: | :---: | :--- |
@@ -503,5 +197,139 @@ The combination of `isPhysical` and `isDigital` flags in the `ProductType` seed 
 | **DIGITAL_GOOD** | **N** | **Y** | No shipping; triggers automated download/email. |
 | **ASSET_USAGE** | **Y** | **N** | Rental logic (expects the item to be returned). |
 
-> [!NOTE]
-> The `isPhysical` flag is the master switch that determines if an item needs to enter the warehouse flow or if it can be fulfilled "instantly" by the system.
+---
+
+### Entity 3: `ProductAssoc` — The Connective Tissue
+`ProductAssoc` defines how products relate to each other. If the `Product` table is a list of individuals, `ProductAssoc` is the **Family Tree**.
+
+- **Structure**: `productId` (Source) → `productIdTo` (Target) via `productAssocTypeId` (Verb).
+- **The "Big Three" Association Types**:
+    - **`PRODUCT_VARIANT`**: Links a parent "header" (T-Shirt) to its sellable SKUs (Red, Small).
+    - **`PRODUCT_COMPONENT`**: Defines the "Recipe" for a kit (e.g., 1 Mat + 2 Blocks).
+    - **`ALSO_BOUGHT`**: Powers website recommendations.
+
+#### Universal Junction Table
+HotWax uses `ProductAssoc` as a **Universal Junction Table**. Instead of creating separate physical tables for every relationship type, one flexible table handles everything using columns like `QUANTITY` and `SEQUENCE_NUM`.
+
+---
+
+### Entity 4: `GoodIdentification` — The Identifier Bridge
+The `GoodIdentification` table allows you to link one internal `productId` (like `10001`) to many external codes (SKUs, Barcodes, Shopify IDs).
+
+#### Many-to-One Identification
+| `productId` | `goodIdentificationTypeId` | `idValue` | Who uses this? |
+| :--- | :--- | :--- | :--- |
+| `10001` | **`SKU`** | `TSHIRT-RED-L` | The Warehouse |
+| `10001` | **`UPCA`** | `885001234567` | The Barcode Scanner |
+| `10001` | **`EAN`** | `5012345678901` | European Retailers |
+| `10001` | **`HS_CODE`** | `6109.10.00` | International Customs |
+| `10001` | **`SHOPIFY_ID`** | `gid://shopify/Product/123` | The Shopify Sync |
+
+#### Architectural Significance
+- **Decoupling**: Changing a SKU during re-branding only requires updating the `GoodIdentification` record, preserving internal `productId` history.
+- **Search Performance**: Barcode scans perform a high-speed lookup on the `idValue` index rather than searching the main `Product` table.
+- **Composite Primary Key**: `[productId, goodIdentificationTypeId]`. This ensures one product has only one value per identification type (e.g., one SKU per product).
+
+---
+
+## MENTAL MAP: READING IN CLUSTERS
+To understand the full architecture, read the entities in functional clusters:
+
+1.  **Product Identity**: `ProductType` → `Product` → `GoodIdentification`.
+2.  **Product Relationships**: `Product` → `ProductAssoc`.
+3.  **Features & Attributes**: `ProductFeature` → `ProductFeatureAppl`.
+4.  **Store & Shopify Visibility**: `ProductStore` → `ShopifyShop` → `ShopifyShopProduct`.
+5.  **Inventory & Stock**: `Product` → `InventoryItem` → `InventoryItemDetail`.
+
+---
+
+## DATA QUALITY & DIAGNOSTICS
+
+### Shipping Weight Audit
+Missing weight on physical variants leads to shipping rate errors and carrier rejections.
+```sql
+SELECT p.PRODUCT_ID, p.INTERNAL_NAME, p.WEIGHT_UOM_ID, p.SHIPPING_WEIGHT
+FROM PRODUCT p
+WHERE p.IS_VARIANT = 'Y' AND p.WEIGHT_UOM_ID IS NULL AND p.PRODUCT_TYPE_ID = 'FINISHED_GOOD';
+```
+
+### Orphan Variant Detection
+Orphan variants claim to be children but lack a parent link in `PRODUCT_ASSOC`.
+```sql
+SELECT p.PRODUCT_ID, p.INTERNAL_NAME
+FROM PRODUCT p
+WHERE p.IS_VARIANT = 'Y'
+AND NOT EXISTS (SELECT 1 FROM PRODUCT_ASSOC pa WHERE pa.PRODUCT_ID_TO = p.PRODUCT_ID AND pa.PRODUCT_ASSOC_TYPE_ID = 'PRODUCT_VARIANT');
+```
+
+---
+
+## TECHNICAL Q&A
+- **Q: Why is `fromDate` in the `ProductAssoc` PK?**
+    - It allows for **Relationship History**. You can link Product A to Product B multiple times across time with different quantities.
+- **Q: When is weight managed at the parent level?**
+    - Best when all variants weigh the same. For different weights, manage at the child level.
+
+
+
+---
+To study the data effectively, you should follow the **Dependency Sequence**. In database terms, you study the ## ROADMAP: STUDY & OPERATIONS SEQUENCE
+
+To study the HotWax data model effectively, you should follow the **Dependency Sequence**. In database terms, this means studying the tables that "stand alone" (Primary Anchors) first, and then moving to the tables that "point" to them (Foreign Keys).
+
+### Part 1: The Learning Sequence (Recommended Study Order)
+If you are querying the database to understand the system architecture, follow this order:
+
+1.  **The Rulebooks (Type Tables)**: 
+    *   `ProductType`, `ProductAssocType`, `GoodIdentificationType`.
+    *   *Why?* You must understand the categories (e.g., "What is a Finished Good?") before looking at actual products.
+2.  **The Anchor**: 
+    *   `Product`.
+    *   *Why?* Almost every other table in the system relies on a `productId` pointing here.
+3.  **The Identities**: 
+    *   `GoodIdentification`.
+    *   *Why?* This is the "Bridge" that allows you to find recognizable SKUs for internal Database IDs.
+4.  **The Structure**: 
+    *   `ProductAssoc`.
+    *   *Why?* Explains how the products you've identified are grouped into Parents, Children, and Bundles.
+5.  **The Warehouse Layer**: 
+    *   `Facility`, `InventoryItem`, `ProductFacility`.
+    *   *Why?* Adds the "Physical" layer—how many units exist and where they are located.
+6.  **The Integration Layer**: 
+    *   `ShopifyShop`, `ShopifyShopProduct`.
+    *   *Why?* The final layer connecting internal OMS data to the external Shopify world.
+
+---
+
+### Part 2: The Data Entry Sequence (Sync Flow)
+When a Product Sync occurs, the system populates entities in this specific order to maintain **Referential Integrity** and avoid Foreign Key errors:
+
+| Order | Entity | Action | Architectural Reason |
+| :--- | :--- | :--- | :--- |
+| **1** | **`Product`** (Virtual) | Insert/Update | The "Parent" must exist before children or associations. |
+| **2** | **`Product`** (Variant) | Insert/Update | Create the physical, sellable SKU unit. |
+| **3** | **`ProductAssoc`** | Insert | Link Variant to Virtual (requires both IDs to exist). |
+| **4** | **`GoodIdentification`** | Insert/Update | Attach the SKU/Barcode to the Variant. |
+| **5** | **`ProductFeatureAppl`** | Insert | Apply Size/Color attributes to the Variant. |
+| **6** | **`ProductCategoryMember`** | Insert | Place the product into the appropriate Catalog/Category. |
+| **7** | **`ShopifyShopProduct`** | Insert/Update | **Critical**: Map the HotWax ID to the Shopify ID. |
+| **8** | **`ProductPrice`** | Insert/Update | Set the selling price (requires the product to exist). |
+| **9** | **`InventoryItem`** | Insert/Update | Initialize stock levels at the facility. |
+
+---
+
+### Part 3: Sequence for Operational Workflows
+
+#### A. Inventory Adjustment (Manual)
+1.  **`InventoryItem`**: Update the `quantityOnHandTotal`.
+2.  **`InventoryItemDetail`**: **Mandatory Step**. Every change in stock must record a "Reason" (e.g., Damaged, Cycle Count) here for auditing.
+3.  **`ProductInventoryItem`**: (View) used to verify the final recalculated totals.
+
+#### B. Order Fulfillment (The "Pick" Flow)
+1.  **`PicklistItem`**: Identifies which specific product is being requested from the shelf.
+2.  **`InventoryItem`**: Validates the `AVAILABLE` status of the unit.
+3.  **`ItemIssuance`**: Links the specific physical unit (`InventoryItem`) to the `OrderItem`.
+4.  **`InventoryItemDetail`**: Finalizes the transaction, recording that the item has left the warehouse.
+
+> [!TIP]
+> **The Golden Rule of Study**: Always start with **`Product`**. If you don't understand the `productId`, every other table will be confusing. Once you have the ID, move to **`GoodIdentification`** to translate it into a recognizable SKU.
