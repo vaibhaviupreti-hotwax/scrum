@@ -163,7 +163,7 @@ A key pattern in the HotWax/OFBiz data model is that most "Main" entity tables h
 | `Product`            | `ProductType`                |
 | `ProductAssoc`       | `ProductAssocType`           |
 | `GoodIdentification` | `GoodIdentificationType`     |
-| `ProductFeature`      | `ProductFeatureType`         |
+| `ProductFeature`     | `ProductFeatureType`         |
 | `ProductFeatureAppl` | `ProductFeatureApplType`     |
 
 ---
@@ -175,13 +175,14 @@ Product is the anchor of this entire data model. Everything else either:
 - **Tracks** the product's stock (`InventoryItem`, `ProductFacility`)
 
 ---
+
 ## Understanding Type Tables
 The **Type table** serves as a predefined lookup list. It defines the allowed values and behaviors for a corresponding Main table field. 
 
 - **The Dropdown Analogy**: Think of it like a dropdown menu in a form—the Type table defines the options available in that menu.
 - **Example**: `ProductAssocType` contains values like `PRODUCT_VARIANT`, `PRODUCT_COMPONENT`, and `ALSO_BOUGHT`. The `ProductAssoc` table then uses these values to define the specific relationship between two products.
 - **Rule of Thumb**: You **never** store dynamic business data in Type tables. They exist solely to define the rules and categories of the system.
----
+
 ---
 
 ## Mental Map: Reading the Data Model in Clusters
@@ -207,7 +208,7 @@ To understand the full architecture, it's easier to read the entities in **Clust
 ### Cluster 5 — Inventory & Stock Tracking
 `Product` → `InventoryItem` → `InventoryItemDetail` + `ProductFacility`
 - **Focus**: "How much stock exists, where is it located, and what specific transactions changed the count?"
----
+
 ---
 
 ## Real-World Scenario: Syncing a "Red Small Cotton T-Shirt"
@@ -230,3 +231,128 @@ Here is how the sync flow looks when a specific product moves from Shopify to th
 
 > [!NOTE]
 > Every one of these steps corresponds to a "box" in the architectural diagram. The lines in the diagram show exactly how data is handed off from one entity to the next.
+
+---
+
+## Data Quality Audit: Shipping Weights
+
+### The "Null Weight" Problem
+A common data quality issue occurs when variants (physical products) are missing weight information. 
+
+**Detection Query:**
+```sql
+SELECT
+    p.PRODUCT_ID,
+    p.PRODUCT_TYPE_ID,
+    p.INTERNAL_NAME,
+    p.WEIGHT_UOM_ID,
+    p.SHIPPING_WEIGHT,
+    parent.PRODUCT_ID        AS PARENT_ID,
+    parent.WEIGHT_UOM_ID     AS PARENT_WEIGHT_UOM,
+    parent.SHIPPING_WEIGHT   AS PARENT_SHIPPING_WEIGHT
+FROM PRODUCT p
+LEFT JOIN PRODUCT_ASSOC pa
+    ON pa.PRODUCT_ID_TO = p.PRODUCT_ID
+    AND pa.PRODUCT_ASSOC_TYPE_ID = 'PRODUCT_VARIANT'
+    AND pa.THRU_DATE IS NULL
+LEFT JOIN PRODUCT parent
+    ON parent.PRODUCT_ID = pa.PRODUCT_ID
+WHERE p.IS_VARIANT = 'Y'
+    AND p.WEIGHT_UOM_ID IS NULL
+    AND p.PRODUCT_TYPE_ID = 'FINISHED_GOOD'
+LIMIT 5;
+```
+
+### Risks of Missing Weight Data
+If `WEIGHT_UOM_ID` is NULL and `SHIPPING_WEIGHT` is 0 (with no parent fallback), it can lead to:
+- **Incorrect Shipping Rates**: Customers might be undercharged for shipping.
+- **Carrier Rejections**: Some carrier APIs will reject shipments with zero weight.
+- **Insurance & Compliance**: High-value items (like jewelry) require accurate weight for declared value and insurance.
+- **Silent Failures**: The system might default to a flat rate, masking the data issue without alerting anyone.
+
+---
+
+## Product Hierarchy & Relationships
+
+### Core Definitions
+- **A Variant always has a parent product.**
+- **A Virtual product never has a parent.**
+- **A Standalone product has no parent and no children.**
+
+The `PRODUCT_ASSOC` table is the "truth" for these links. If a product isn't listed as a `PRODUCT_ID_TO` in a `PRODUCT_VARIANT` association, it has no parent.
+
+### Matrix: Identifying Product States
+| IS_VIRTUAL | IS_VARIANT | Description |
+| :---: | :---: | :--- |
+| **Y** | **N** | ✅ **Virtual Parent**: The top of the hierarchy. |
+| **N** | **Y** | ✅ **Standard Variant**: A child product linked to its parent. |
+| **Y** | **Y** | ✅ **Mid-level Product**: Acts as both a parent and a child. |
+| **N** | **N** | ✅ **Standalone**: An independent product with no relationships. |
+| **N** | **Y** (Orphan) | 🚨 **Orphan Variant**: Claims to be a variant but lacks a parent link. |
+
+---
+
+## Orphan Variant Detection
+
+"Orphan variants" are products marked as `IS_VARIANT = 'Y'` that are missing a corresponding entry in the `PRODUCT_ASSOC` table.
+
+**Detection Query:**
+```sql
+SELECT p.PRODUCT_ID,
+       p.INTERNAL_NAME,
+       p.PRODUCT_NAME
+FROM PRODUCT p
+WHERE p.IS_VARIANT = 'Y'
+AND NOT EXISTS (
+    SELECT 1
+    FROM PRODUCT_ASSOC pa
+    WHERE pa.PRODUCT_ID_TO = p.PRODUCT_ID
+    AND pa.PRODUCT_ASSOC_TYPE_ID = 'PRODUCT_VARIANT'
+);
+```
+
+### Common Causes for Orphans
+| Cause | Description |
+| :--- | :--- |
+| **Broken Shopify Sync** | The parent was not imported or the sync failed mid-way. |
+| **Parent Deletion** | The parent was removed from the system, but the variants were left behind. |
+| **Incomplete Migration** | Only specific sellable SKUs were migrated without their virtual parents. |
+| **Incorrect Flagging** | A product was accidentally marked as a variant during manual entry. |
+
+---
+
+## Technical Q&A
+- **Q: When is weight managed at the parent level vs. child level?**
+    - **Parent Level**: Best for products where all variants weigh the same (e.g., different colors of the same t-shirt).
+    - **Child Level**: Essential when variants have different weights (e.g., a 1lb box vs. a 5lb box of the same product).
+    - **Best Practice**: Always check the parent if the child's weight is NULL.
+
+---
+
+## Internal Name vs. Product Name
+
+Understanding the difference between these two naming fields is critical for operations:
+
+### 1. Internal Name (`internalName`)
+This is the **warehouse/operations name**. It is what your internal team uses to identify the product inside the system. These are often technical and "ugly" (e.g., using SKU codes or handles).
+
+**Rules:**
+- **Practically Mandatory**: It should always be filled in.
+- **Search-Friendly**: Must be unique enough to find the product without confusion.
+- **Flexible Format**: No strict formatting rules—can be a SKU, a handle, a code, etc.
+- **OMS Focused**: Used heavily in search, lookups, sync processes, and logs.
+
+### 2. Product Name (`productName`)
+This is the **customer-facing name**. This is what appears on the website, the invoice, and the packing slip. It is meant to be clean, readable, and professional for display purposes.
+
+---
+
+### Comparison: Internal vs. Product Name
+
+| Feature | Internal Name | Product Name |
+| :--- | :--- | :--- |
+| **Audience** | Your internal team | Your customers |
+| **Example** | `V_abominable-hoodie` | `Abominable Hoodie` |
+| **Used in** | OMS search, sync, logs | Website, invoice, packing slip |
+| **Can be "ugly"?** | Yes | No (must be professional) |
+| **Always filled?** | Yes | Sometimes blank on virtuals |
