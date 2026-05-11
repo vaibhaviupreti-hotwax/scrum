@@ -1,0 +1,74 @@
+shopify - retailer customer place orders
+    channels
+    ideal customers - ICP has OMS and netsuite(erp)
+
+    make a list:
+        customer
+        product
+        order
+        payments
+        inventory
+        shipping
+
+    warehouse types acc to cater needs
+        1. DC - distribution center
+        2. FC - fulfillment center
+        3. store - physical store
+
+        domain obj/logical model  - mapped with phy called as data model
+    
+    oms scope/software terms - entity relationship
+        
+how to think an entity and how to identify entity by its name - part of domain obj and its role in that
+
+shopify data model
+
+activity
+---------
+shopify orders er diagram
+
+upto wednesday - data model ch 4 takk
+thurs|fri - er diagram? scenarios all
+
+job scheduler
+system message creator queue full process (2)(4)
+system message remote id is the "to address" - remote locations allowed (creds) - 
+(table)
+
+json line
+why querying from shopify in bulk is a lifecycle on its own? how many steps it has?
+
+quartz
+
+
+-------------------------------
+order item will ship from which facility?
+
+inventory management 
+order management
+
+shipment can be created - no pk
+
+inventoryItemDetail - 
+
+- 
+InventoryItem should not be PK to reach to the answer
+facility - static objects  -to enrich data not 
+new order not means new facility
+retail domain..
+
+these have: order creation/order allocation = inventory tight bond
+but can be debated with services/digital items
+//query should not be domain dependent
+
+inventory item/service item
+
+my example - extra dependency
+
+orderItemShipGroupAssoc - 
+
+extra - AI suggested.
+-------------------------------------------
+1. why querying from shopify in bulk is a lifecycle on its own? 
+    - for each entity there is an activity
+    how many entities  

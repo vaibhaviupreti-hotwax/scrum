@@ -1,0 +1,36 @@
+
+Customer/Storefront
+        ↓
+     Shopify
+        ↓
+ Webhooks / APIs
+        ↓
+    HotWax OMS
+   ├── Order Mgmt
+   ├── Inventory Mgmt
+   ├── Fulfillment
+   ├── Brokering
+   ├── Returns
+   └── Customer Service
+        ↓
+ Integration Layer
+   ├── ERP
+   ├── WMS
+   ├── POS
+   ├── Payment Systems
+   ├── Shipping Carriers
+   └── Marketplaces
+        ↓
+ Operational Apps
+   ├── Fulfillment App
+   ├── Inventory App
+   ├── Returns App
+   ├── BOPIS
+   └── Store Ops
+        ↓
+ Database / OFBiz Entities
+        ↓
+ Reporting / Analytics
+
+
+This is the high-level “brain map” of HotWax OMS.

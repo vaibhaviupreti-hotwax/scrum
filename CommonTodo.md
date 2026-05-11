@@ -83,3 +83,15 @@
 - [ ] **Documentation**: Revise Gift Card, Returns, Exchanges, and BOPIS lifecycles. Update store operations docs.
 - [ ] **Reading/Blogs**: Read 1 blog per week by the end of the month (Anil Sir's assignment).
 - [ ] **New Keywords**: Review Wave Picking, SSO, tool factory pattern.
+
+
+## 10. Insights & Notes from Anil Sir dated may 09 2026
+- **Business Automation & Supply Chain**: Core focus areas for the system.
+- **ORM Comparison (OFBiz Entity Engine vs. Hibernate)**: 
+  - **Hibernate** maps static Java classes (POJOs) to database tables, which requires compiling classes for every entity.
+  - **OFBiz Entity Engine** uses XML definitions and a dynamic dictionary approach (`GenericValue` maps). This makes it highly flexible, metadata-driven, and allows changing the data model without needing to recompile Java code.
+- **Database Choices (Oracle vs. MySQL vs. PostgreSQL)**:
+  - Why HotWax uses MySQL: It is heavily optimized for read-heavy operations, aligns with the "freedom philosophy" (open-source), and offers simplicity at scale.
+  - CRUD transaction management has historically been a strong point for PostgreSQL, but MySQL's combination of simplicity and scalability won out.
+- **Abstract Syntax Trees (AST)**: Compiles to SQL (or other querying languages), providing essential database independence.
+

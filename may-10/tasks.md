@@ -1,0 +1,7 @@
+- Product assignment - data model book + then product sync
+- business problem assigment - preorder track + sql query on it
+- anil sir recording notes + assignment
+- bug finding assignment
+- uml diagrams assignment
+- Shipment tables all aditya sir class work
+- dbeaver download
