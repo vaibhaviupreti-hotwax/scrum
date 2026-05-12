@@ -415,3 +415,5 @@ AND NOT EXISTS (SELECT 1 FROM PRODUCT_ASSOC pa WHERE pa.PRODUCT_ID_TO = p.PRODUC
 
 > [!TIP]
 > **The Golden Rule**: Always start with **`Product`**. If you don't understand the `productId`, every other table will be confusing. Move to **`GoodIdentification`** to translate IDs into recognized SKUs.
+
+---
