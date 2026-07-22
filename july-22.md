@@ -542,7 +542,416 @@ if (resp.status === 200 && !commonUtil.hasError(resp) && resp.data) {
 
 
 
-
+## updated rest json
+```json
+[
+    {
+        "salesChannelEnumId": "WEB_SALES_CHANNEL",
+        "orderId": "M106429",
+        "createdStamp": 1782174500169,
+        "roles": [
+            {
+                "fromDate": 1782174504340,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "BILL_FROM_VENDOR",
+                "createdStamp": 1782174500169,
+                "partyGroup": {
+                    "lastUpdatedStamp": 1779690572277,
+                    "groupName": "Default Company",
+                    "createdStamp": 1779735446249,
+                    "logoImageUrl": "/resources/uploads/images/company_logo.png",
+                    "_entity": "org.apache.ofbiz.party.party.PartyGroup"
+                },
+                "partyId": "COMPANY",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            },
+            {
+                "fromDate": 1782174504340,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "SHIP_FROM_VENDOR",
+                "createdStamp": 1782174500169,
+                "partyGroup": {
+                    "lastUpdatedStamp": 1779690572277,
+                    "groupName": "Default Company",
+                    "createdStamp": 1779735446249,
+                    "logoImageUrl": "/resources/uploads/images/company_logo.png",
+                    "_entity": "org.apache.ofbiz.party.party.PartyGroup"
+                },
+                "partyId": "COMPANY",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            },
+            {
+                "fromDate": 1782174504340,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "BILL_TO_CUSTOMER",
+                "person": {
+                    "lastName": "Wilson",
+                    "_entity": "org.apache.ofbiz.party.party.Person",
+                    "lastUpdatedStamp": 1782174740212,
+                    "firstName": "Wade"
+                },
+                "createdStamp": 1782174500169,
+                "partyId": "M111424",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            },
+            {
+                "fromDate": 1782174504339,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "END_USER_CUSTOMER",
+                "person": {
+                    "lastName": "Wilson",
+                    "_entity": "org.apache.ofbiz.party.party.Person",
+                    "lastUpdatedStamp": 1782174740212,
+                    "firstName": "Wade"
+                },
+                "createdStamp": 1782174500169,
+                "partyId": "M111424",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            },
+            {
+                "fromDate": 1782174504337,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "PLACING_CUSTOMER",
+                "person": {
+                    "lastName": "Wilson",
+                    "_entity": "org.apache.ofbiz.party.party.Person",
+                    "lastUpdatedStamp": 1782174740212,
+                    "firstName": "Wade"
+                },
+                "createdStamp": 1782174500169,
+                "partyId": "M111424",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            },
+            {
+                "fromDate": 1782174504339,
+                "lastUpdatedStamp": 1782174500169,
+                "roleTypeId": "SHIP_TO_CUSTOMER",
+                "person": {
+                    "lastName": "Wilson",
+                    "_entity": "org.apache.ofbiz.party.party.Person",
+                    "lastUpdatedStamp": 1782174740212,
+                    "firstName": "Wade"
+                },
+                "createdStamp": 1782174500169,
+                "partyId": "M111424",
+                "_entity": "org.apache.ofbiz.order.order.OrderRole"
+            }
+        ],
+        "orderTypeId": "SALES_ORDER",
+        "paymentPreferences": [
+            {
+                "createdStamp": 1782174500169,
+                "presentmentAmount": 69,
+                "_entity": "org.apache.ofbiz.order.order.OrderPaymentPreference",
+                "orderPaymentPreferenceId": "M100613",
+                "presentmentCurrencyUom": "USD",
+                "moqui.basic.StatusItem": {
+                    "lastUpdatedStamp": 1779690571782,
+                    "statusId": "PAYMENT_AUTHORIZED",
+                    "statusAge": 50,
+                    "createdStamp": 1779735445523,
+                    "statusTypeId": "PAYMENT_PREF_STATUS",
+                    "description": "Authorized",
+                    "statusCode": "AUTHORIZED",
+                    "_entity": "statuses"
+                },
+                "maxAmount": 69,
+                "lastUpdatedStamp": 1782174500169,
+                "org.apache.ofbiz.accounting.payment.PaymentMethodType": {
+                    "description": "Ext Other Gateways",
+                    "lastUpdatedStamp": 1779690572318,
+                    "paymentMethodTypeId": "EXT_SHOP_OTHR_GTWAY",
+                    "createdStamp": 1779735445985,
+                    "_entity": "org.apache.ofbiz.accounting.payment.PaymentMethodType"
+                },
+                "manualRefNum": "8761635832125",
+                "paymentMethodTypeId": "EXT_SHOP_OTHR_GTWAY",
+                "createdDate": 1782174505041,
+                "statusId": "PAYMENT_AUTHORIZED"
+            }
+        ],
+        "autoApprove": "Y",
+        "_entity": "org.apache.ofbiz.order.order.OrderHeader",
+        "presentmentCurrencyUom": "USD",
+        "billToPartyId": "M111424",
+        "productStoreId": "STORE",
+        "orderName": "#HCD1332",
+        "lastUpdatedStamp": 1783942002484,
+        "entryDate": 1782174503239,
+        "grandTotal": 69,
+        "externalId": "72121248975979",
+        "identifications": [
+            {
+                "fromDate": 1783945930118,
+                "lastUpdatedStamp": 1783947284652,
+                "createdStamp": 1783945930217,
+                "idValue": "RTL_1234",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1783947284635,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1783948318631,
+                "lastUpdatedStamp": 1783955121595,
+                "createdStamp": 1783948318661,
+                "idValue": "RET_1234567",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1783955121533,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1783955121533,
+                "lastUpdatedStamp": 1783955238530,
+                "createdStamp": 1783955121613,
+                "idValue": "RET_12345678",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1783955238450,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1783955238450,
+                "lastUpdatedStamp": 1783955304123,
+                "createdStamp": 1783955238599,
+                "idValue": "RET_12345678",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1783955304066,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1783955304066,
+                "lastUpdatedStamp": 1783956262197,
+                "createdStamp": 1783955304139,
+                "idValue": "RET_123456789",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1783956262111,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1783956262111,
+                "lastUpdatedStamp": 1784020487716,
+                "createdStamp": 1783956262197,
+                "idValue": "RET_1234567890",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "thruDate": 1784020487676,
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1784020487676,
+                "lastUpdatedStamp": 1784020487751,
+                "createdStamp": 1784020487751,
+                "idValue": "RET_123456",
+                "orderIdentificationTypeId": "RETAIL_PRO_ORDER_ID",
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1782174503298,
+                "lastUpdatedStamp": 1783952311675,
+                "createdStamp": 1782174500169,
+                "idValue": "7212124897597",
+                "orderIdentificationTypeId": "SHOPIFY_ORD_ID",
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1782174503298,
+                "lastUpdatedStamp": 1782174500169,
+                "createdStamp": 1782174500169,
+                "idValue": "#HCD1332",
+                "orderIdentificationTypeId": "SHOPIFY_ORD_NAME",
+                "_entity": "co.hotwax.order.OrderIdentification"
+            },
+            {
+                "fromDate": 1782174503298,
+                "lastUpdatedStamp": 1783951391492,
+                "createdStamp": 1782174500169,
+                "idValue": "1332",
+                "orderIdentificationTypeId": "SHOPIFY_ORD_NO",
+                "_entity": "co.hotwax.order.OrderIdentification"
+            }
+        ],
+        "originFacilityId": "_NA_",
+        "contactMechs": [
+            {
+                "lastUpdatedStamp": 1782174500169,
+                "contactMech": {
+                    "lastUpdatedStamp": 1782174500169,
+                    "contactMechTypeId": "EMAIL_ADDRESS",
+                    "infoString": "banibrata.manna@hotwaxsystems.com",
+                    "createdStamp": 1782174500169,
+                    "_entity": "org.apache.ofbiz.party.contact.ContactMech"
+                },
+                "contactMechPurposeTypeId": "ORDER_EMAIL",
+                "contactMechId": "M102457",
+                "createdStamp": 1782174500169,
+                "_entity": "org.apache.ofbiz.order.order.OrderContactMech"
+            },
+            {
+                "lastUpdatedStamp": 1782174500169,
+                "contactMech": {
+                    "lastUpdatedStamp": 1782174500169,
+                    "contactMechTypeId": "EMAIL_ADDRESS",
+                    "infoString": "banibrata.manna@hotwaxsystems.com",
+                    "createdStamp": 1782174500169,
+                    "_entity": "org.apache.ofbiz.party.contact.ContactMech"
+                },
+                "contactMechPurposeTypeId": "SHIPPING_EMAIL",
+                "contactMechId": "M102460",
+                "createdStamp": 1782174500169,
+                "_entity": "org.apache.ofbiz.order.order.OrderContactMech"
+            },
+            {
+                "lastUpdatedStamp": 1782174500169,
+                "contactMech": {
+                    "lastUpdatedStamp": 1782174500169,
+                    "contactMechTypeId": "POSTAL_ADDRESS",
+                    "createdStamp": 1782174500169,
+                    "_entity": "org.apache.ofbiz.party.contact.ContactMech"
+                },
+                "postalAddress": {
+                    "countryGeoId": "USA",
+                    "lastUpdatedStamp": 1782174500169,
+                    "city": "Austin",
+                    "address1": "Wade Wilson, 8104 Dunn St #AAustin, Suite 100",
+                    "postalCode": "78745",
+                    "latitude": 30.2006003,
+                    "createdStamp": 1782174500169,
+                    "_entity": "org.apache.ofbiz.party.contact.PostalAddress",
+                    "toName": "Wade Wilson",
+                    "stateProvinceGeoId": "TX",
+                    "geoPointId": "M100615",
+                    "longitude": -97.8348133
+                },
+                "contactMechPurposeTypeId": "SHIPPING_LOCATION",
+                "createdStamp": 1782174500169,
+                "contactMechId": "M102459",
+                "_entity": "org.apache.ofbiz.order.order.OrderContactMech"
+            }
+        ],
+        "shipGroups": [
+            {
+                "lastUpdatedStamp": 1784728523667,
+                "facilityId": "_NA_",
+                "createdStamp": 1782174480000,
+                "maySplit": "Y",
+                "shipGroupSeqId": "00001",
+                "contactMechId": "M102459",
+                "_entity": "org.apache.ofbiz.order.order.OrderItemShipGroup",
+                "carrierPartyId": "_NA_",
+                "carrierRoleTypeId": "CARRIER",
+                "isGift": "N",
+                "shipmentMethodTypeId": "STOREPICKUP"
+            },
+            {
+                "lastUpdatedStamp": 1784729277925,
+                "facilityId": "BROOKLYN",
+                "createdStamp": 1782174480000,
+                "maySplit": "Y",
+                "shipGroupSeqId": "00002",
+                "contactMechId": "M102459",
+                "_entity": "org.apache.ofbiz.order.order.OrderItemShipGroup",
+                "carrierPartyId": "_NA_",
+                "carrierRoleTypeId": "CARRIER",
+                "isGift": "N",
+                "shipmentMethodTypeId": "STOREPICKUP",
+                "items": [
+                    {
+                        "createdStamp": 1782174500169,
+                        "_entity": "org.apache.ofbiz.order.order.OrderItem",
+                        "itemDescription": "XS / Blue",
+                        "orderItemSeqId": "01",
+                        "unitPrice": 69,
+                        "productId": "M100121",
+                        "taxCode": "true",
+                        "requestedShipMethTypeId": "STANDARD",
+                        "statusId": "ITEM_APPROVED",
+                        "statuses": [
+                            {
+                                "lastUpdatedStamp": 1782174500169,
+                                "orderStatusId": "M101668",
+                                "statusId": "ITEM_CREATED",
+                                "createdStamp": 1782174500169,
+                                "statusDatetime": 1782174464000,
+                                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+                            },
+                            {
+                                "lastUpdatedStamp": 1782174500169,
+                                "orderStatusId": "M101671",
+                                "statusId": "ITEM_APPROVED",
+                                "statusUserLogin": "system",
+                                "createdStamp": 1782174500169,
+                                "statusDatetime": 1782174504654,
+                                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+                            }
+                        ],
+                        "isPromo": "N",
+                        "isModifiedPrice": "Y",
+                        "unitListPrice": 69,
+                        "orderItemTypeId": "PRODUCT_ORDER_ITEM",
+                        "lastUpdatedStamp": 1782259251145,
+                        "quantity": 1,
+                        "externalId": "17431636705597",
+                        "prodCatalogId": "CATALOG"
+                    }
+                ]
+            }
+        ],
+        "statusId": "ORDER_APPROVED",
+        "currencyUom": "USD",
+        "localeString": "en",
+        "contents": [
+            {
+                "orderItemSeqId": "_NA_",
+                "fromDate": 1782174503299,
+                "lastUpdatedStamp": 1782174500169,
+                "createdStamp": 1782174500169,
+                "contentId": "M100717",
+                "orderContentTypeId": "ORDER_STATUS_URL",
+                "_entity": "org.apache.ofbiz.order.order.OrderContent"
+            }
+        ],
+        "statuses": [
+            {
+                "orderItemSeqId": "01",
+                "lastUpdatedStamp": 1782174500169,
+                "orderStatusId": "M101668",
+                "statusId": "ITEM_CREATED",
+                "createdStamp": 1782174500169,
+                "statusDatetime": 1782174464000,
+                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+            },
+            {
+                "lastUpdatedStamp": 1782174500169,
+                "orderStatusId": "M101669",
+                "statusId": "ORDER_CREATED",
+                "createdStamp": 1782174500169,
+                "statusDatetime": 1782174464000,
+                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+            },
+            {
+                "lastUpdatedStamp": 1782174500169,
+                "orderStatusId": "M101670",
+                "statusId": "ORDER_APPROVED",
+                "statusUserLogin": "system",
+                "createdStamp": 1782174500169,
+                "statusDatetime": 1782174504650,
+                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+            },
+            {
+                "orderItemSeqId": "01",
+                "lastUpdatedStamp": 1782174500169,
+                "orderStatusId": "M101671",
+                "statusId": "ITEM_APPROVED",
+                "statusUserLogin": "system",
+                "createdStamp": 1782174500169,
+                "statusDatetime": 1782174504654,
+                "_entity": "org.apache.ofbiz.order.order.OrderStatus"
+            }
+        ],
+        "riskLevelEnumId": "ORLVL_NONE",
+        "orderDate": 1782174464000,
+        "riskRecommendationEnumId": "ORREC_NONE"
+    }
+]
+```
 
 
 
