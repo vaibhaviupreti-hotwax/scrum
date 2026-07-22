@@ -529,9 +529,9 @@ if (resp.status === 200 && !commonUtil.hasError(resp) && resp.data) {
   };
 ```
 
-
-
-
+- faced an issue during "user-login": user is not associated with any facility, checked facility_party, still not working -- blocker,
+- for above set: VITE_OMS_TYPE=MOQUI | checked cache and pinia and storage too(that was okay) | user.ts(userState working fine - checked browser storage), checked oms: "" (data filled at login time), added maarg
+- continued
 
 
 
