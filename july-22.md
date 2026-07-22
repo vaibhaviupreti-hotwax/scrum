@@ -536,6 +536,7 @@ if (resp.status === 200 && !commonUtil.hasError(resp) && resp.data) {
 - edited an order to make it bopis
 - solr issue
   <img width="681" height="181" alt="image" src="https://github.com/user-attachments/assets/e22e0ce8-4a53-47a0-8850-ecb8bbb0b75a" />
+- Completed Solr Configuration: http://localhost:8080/qapps/Oms/Settings/Search/SearchAdmin?selectedCollection=enterpriseSearch, updated facility
 
 
 
