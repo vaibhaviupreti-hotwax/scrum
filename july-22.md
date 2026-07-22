@@ -537,6 +537,8 @@ if (resp.status === 200 && !commonUtil.hasError(resp) && resp.data) {
 - solr issue
   <img width="681" height="181" alt="image" src="https://github.com/user-attachments/assets/e22e0ce8-4a53-47a0-8850-ecb8bbb0b75a" />
 - Completed Solr Configuration: http://localhost:8080/qapps/Oms/Settings/Search/SearchAdmin?selectedCollection=enterpriseSearch, updated facility
+- updated code according to new api, tested and found test failed
+- <img width="1212" height="429" alt="image" src="https://github.com/user-attachments/assets/3f6d3bec-8558-4a16-9203-c355598b8776" />
 
 
 
