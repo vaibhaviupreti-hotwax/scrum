@@ -7,3 +7,4 @@
 
 - to check SM - SQL purging findings
 - virtual product and variants association, scenario: if a  virtual product got skipped (there was dependency with the earlier virtual/var)
+- Read amogh's PR and checked what ignore-error true and disable-authz true does at different level. we should carefully apply disable-authz true with update# type of services and they can call services internally and can again stop the flow because of required authorization at service level. 
