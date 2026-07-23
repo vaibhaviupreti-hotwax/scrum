@@ -952,14 +952,21 @@ if (resp.status === 200 && !commonUtil.hasError(resp) && resp.data) {
     }
 ]
 ```
+New API payload (resp.data[0]) - exact keys and their direct mapping  (without  || fallback ):
+| **UI Feature / Need** | **Old Payload**         | **New Payload (`resp.data[0]`)**      | **Direct Mapping**               |
+| --------------------- | ----------------------- | ------------------------------------- | -------------------------------- |
+| Response Container    | `resp.data.orderDetail` | `resp.data[0]`                        | `const data = resp.data[0];`     |
+| Status ID             | `orderStatusId`         | `statusId`                            | `data.statusId`                  |
+| Customer ID           | `partyId`               | `billToPartyId`                       | `data.billToPartyId`             |
+| Shopify Order ID      | `orderExternalId`       | `externalId`                          | `data.externalId`                |
+| Customer Name         | `customerFirstName`     | `roles[] → BILL_TO_CUSTOMER → person` | Extract from `data.roles`        |
+| Billing Address       | `billingAddress`        | `contactMechs[] → POSTAL_ADDRESS`     | Extract from `data.contactMechs` |
+| Email                 | `billingEmail`          | `contactMechs[] → EMAIL_ADDRESS`      | Extract from `data.contactMechs` |
+| Phone                 | `billingPhone`          | `contactMechs[] → TELECOM_NUMBER`     | Extract from `data.contactMechs` |
+| Approved Date         | `statusDatetime`        | `statuses[] → createdStamp`           | Extract from `data.statuses`     |
 
-
-
-
-
-
-
-
-
+### Got a new finding: why are we showing a stale customer record on the frontend?
+- We can see in earlier payload we were getting customer role directly after view entity has arranged that for us via a service but now, when we use a direct and automatic entity facade response, we see that we get everything and need to apply filtering from our end that is frontend.
+- We can get data from backend in several ways like through data documents, service(view entity), REST entity //[check perform find usage - reference]. When to use which one of them, what is the ideal case and best practice? 
 
 
