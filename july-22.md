@@ -968,5 +968,7 @@ New API payload (resp.data[0]) - exact keys and their direct mapping  (without  
 ### Got a new finding: why are we showing a stale customer record on the frontend?
 - We can see in earlier payload we were getting customer role directly after view entity has arranged that for us via a service but now, when we use a direct and automatic entity facade response, we see that we get everything and need to apply filtering from our end that is frontend.
 - We can get data from backend in several ways like through data documents, service(view entity), REST entity //[check perform find usage - reference]. When to use which one of them, what is the ideal case and best practice? 
+--------
+
 
 
